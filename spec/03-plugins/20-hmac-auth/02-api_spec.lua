@@ -7,6 +7,10 @@ describe("Plugin: hmac-auth (API)", function()
   -- Contains all reserved characters from RFC 3986
   local plugin_username = "spongebob squarepants :/?#[]@!$&'()*+,;="
   local url_username = "spongebob%20squarepants%20%3a%2f%3f%23%5b%5d%40%21%24%26%27%28%29%2a%2b%2c%3b%3d"
+
+  -- Test for a simpler username that doesn't trigger encodings as well
+  local simple_username = "foo"
+
   setup(function()
     helpers.run_migrations()
 
@@ -37,6 +41,21 @@ describe("Plugin: hmac-auth (API)", function()
           body = {
             username = plugin_username,
             secret = "1234"
+          },
+          headers = {["Content-Type"] = "application/json"}
+        })
+
+        local body = assert.res_status(201, res)
+        credential = cjson.decode(body)
+        assert.equal(consumer.id, credential.consumer_id)
+      end)
+      it("[SUCCESS] should create a hmac-auth credential (simple)", function()
+        local res = assert(client:send {
+          method = "POST",
+          path = "/consumers/bob/hmac-auth/",
+          body = {
+            username = simple_username,
+            secret = "simple"
           },
           headers = {["Content-Type"] = "application/json"}
         })
@@ -130,6 +149,17 @@ describe("Plugin: hmac-auth (API)", function()
         local res = assert(client:send {
           method = "GET",
           path = "/consumers/bob/hmac-auth/" .. url_username,
+          body = {},
+          headers = {["Content-Type"] = "application/json"}
+        })
+        local body_json = assert.res_status(200, res)
+        local body = cjson.decode(body_json)
+        assert.equals(credential.id, body.id)
+      end)
+      it("should retrieve by username (simple)", function()
+        local res = assert(client:send {
+          method = "GET",
+          path = "/consumers/bob/hmac-auth/" .. simple_username,
           body = {},
           headers = {["Content-Type"] = "application/json"}
         })
